@@ -2,200 +2,205 @@
 
 Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em NodeJS, vamos controlar rotas privadas, fazer a autenticação JWT e receber um token de autenticação. A autenticação do usuário vai ficar guardada no Redux para sempre que precisarmos do usuário logado, ter acesso ao Nome e avatar.
 
-## Aula 12 - Configurando Store
+## Aula 13 - Autenticação
 
-Primeiramente adicionamos as bibliotecas:
+Agora nós iremos fazer a autenticação do usuário, recebendo email e senha do Redux-Saga, ai recebemos de volta o token do usuário para autenticar ele na aplicação.
 
-```
-yarn add redux redux-saga react-redux reactotron-redux reactotron-redux-saga immer
-```
-
-1-Com isso criamos a pasta Store com index.js dentro.
-2-Criamos a pasta Modules dentro de Store
-3-Criamos o arquivo rootReducer e rootSaga e a pasta auth
-4- Dentro de auth criamos os arquivos: actions.js, reducer.js e sagas.js
-
-Dentro de `reducer.js`:
+Primeiramente vamos em `actions.js` do nosso Auth:
 
 ```
-const INITIAL_STATE = {};
+export function signInRequest(email, password) {
+  return {
+    type: '@auth/SIGN_IN_REQUEST',
+    payload: { email, password },
+  };
+}
+
+export function signInSuccess(token, user) {
+  return {
+    type: '@auth/SIGN_IN_SUCCESS',
+    payload: { token, user },
+  };
+}
+
+
+export function signFailure() {
+  return {
+    type: '@auth/SIGN_FAILURE ',
+  };
+}
+
+```
+
+Nós devemos instalar o Axios para fazer a chamada da nossa Api:
+
+```
+yarn add axios
+```
+
+Agora vamos no nosso `sagas.js` de autenticação:
+
+```
+import { takeLatest, call, put, all } from 'redux-saga/effects';
+
+import api from '~/services/api';
+
+import { signInSuccess } from './actions';
+import history from '~/services/history';
+
+export function* signIn({ payload }) {
+  const { email, password } = payload;
+
+  const response = yield call(api.post, 'sessions', {
+    email,
+    password,
+  });
+
+  const { token, user } = response.data;
+
+  if (!user.provider) {
+    console.tron.error('Usuário não é um prestador');
+    return;
+  }
+
+  yield put(signInSuccess(token, user));
+
+  history.push('/dashboard');
+}
+export default all([takeLatest('@auth/SIGN_IN_REQUEST', signIn)]);
+
+```
+
+Entretanto ainda não vai funcionar pois a rota que criamos, é como se o usuário estivesse sempre deslogado.
+Com isso vamos para o `index.js` do SignIn:
+Lá iremos importar o useDispatch e fazer o uso do dispatch para receber o email e a senha no `handleSubmit`
+
+```
+import React from 'react';
+
+import { useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { Form, Input } from '@rocketseat/unform';
+import * as Yup from 'yup';
+import logo from '~/assets/logo.svg';
+
+import { signInRequest } from '~/store/modules/auth/actions';
+
+const schema = Yup.object().shape({
+  email: Yup.string()
+    .email('Insira um email válido')
+    .required('Email é obrigatório'),
+  password: Yup.string().required('A senha é obrigatória'),
+});
+
+export default function SignIn() {
+  const dispatch = useDispatch();
+
+  function handleSubmit({ email, password }) {
+    dispatch(signInRequest(email, password));
+  }
+  return (
+    <>
+      <img src={logo} alt="GoBarber" />
+      <Form schema={schema} onSubmit={handleSubmit}>
+        <Input name="email" type="email" placeholder="Seu e-mail" />
+        <Input
+          name="password"
+          type="password"
+          placeholder="Sua senha secreta"
+        />
+
+        <button type="submit">Acessar</button>
+        <Link to="/register">Criar conta gratuita</Link>
+      </Form>
+    </>
+  );
+}
+
+```
+
+Agora devemos ir no Reducer de autenticação, para fazer com que ele ouça o nosso signin, para mostrar para ele q estamos logados.
+
+```
+import produce from 'immer';
+
+const INITIAL_STATE = {
+  token: null,
+  signed: false,
+  loading: false,
+};
 
 export default function auth(state = INITIAL_STATE, action) {
   switch (action.type) {
+    case '@auth/SIGN_IN_SUCCESS':
+      return produce(state, draft => {
+        draft.token = action.payload.token;
+        draft.signed = true;
+      });
     default:
       return state;
   }
 }
-
 ```
 
-Dentro de `sagas.js`:
+Agora para finalizar e fazer com que o usuário seja redirecionado para o Dashboard, vamos em `Route.js`:
+
+Aqui nós importamos o store e no const signed, seja = store.getState().auth
 
 ```
-import { all } from 'redux-saga';
-
-export default all([]);
-
-```
-
-Agora devemos combinar os reducers no `rootReducer.js`:
-
-```
-import { combineReducers } from 'redux';
-import auth from './auth/reducer';
-
-export default combineReducers({
-  auth,
-});
-
-```
-
-E agora precisamos combinar os sagas no `rootSaga.js`
-
-```
-import { all } from 'redux-saga/effects';
-
-import auth from './auth/sagas';
-
-export default function* rootSaga() {
-  return yield all([auth]);
-}
-
-```
-
-Para o nosso arquivo Index nao ficar muito grande, criamos o arquivo createStore.js para algumas funcionalidades.
-
-Agora vamos para o `index.js` do Store:
-
-```
-import createSagaMiddleare from 'redux-saga';
-import createStore from './createStore';
-
-import rootReducer from './modules/rootReducer';
-import rootSaga from './modules/rootSaga';
-
-const sagaMiddleware = createSagaMiddleare();
-
-const middlewares = [sagaMiddleware];
-
-const store = createStore(rootReducer, middlewares);
-
-sagaMiddleware.run(rootSaga);
-export default store;
-
-```
-
-Agora em `createStore.js`:
-
-```
- import { createStore } from 'redux';
-
-export default (reducers, middlewares) => {
-  return createStore(reducers, middlewares);
-};
-
-```
-
-Precisamos agora arrumar as configurações no `ReacotronConfig.js`:
-
-```
-import Reactotron from 'reactotron-react-js';
-import { reactotronRedux } from 'reactotron-redux';
-import reactotronSaga from 'reactotron-redux-saga';
-
-if (process.env.NODE_ENV === 'development') {
-  const tron = Reactotron.configure()
-    .use(reactotronRedux())
-    .use(reactotronSaga())
-    .connect();
-
-  tron.clear();
-
-  console.tron = tron;
-}
-
-```
-
-Agora devemos ainda configurar algumas coisas no `index.js` do Store:
-
-```
-import createSagaMiddleare from 'redux-saga';
-import createStore from './createStore';
-
-import rootReducer from './modules/rootReducer';
-import rootSaga from './modules/rootSaga';
-
-const sagaMonitor =
-  process.env.NODE_ENV === 'development'
-    ? console.tron.createSagaMonitor()
-    : null;
-
-const sagaMiddleware = createSagaMiddleare({ sagaMonitor });
-
-const middlewares = [sagaMiddleware];
-
-const store = createStore(rootReducer, middlewares);
-
-sagaMiddleware.run(rootSaga);
-export default store;
-
-```
-
-E agora em `createStore.js`:
-
-```
-import { createStore, compose, applyMiddleware } from 'redux';
-
-export default (reducers, middlewares) => {
-  const enhancer =
-    process.env.NODE_ENV === 'development'
-      ? compose(console.tron.createEnhancer(), applyMiddleware(...middlewares))
-      : applyMiddleware(...middlewares);
-
-  return createStore(reducers, enhancer);
-};
-
-```
-
-Agora nosso Store está todo configurado.
-
-Agora podemos importá-los no `App.js`:
-
-```
+/* eslint-disable react/jsx-props-no-spreading */
 import React from 'react';
-import { Provider } from 'react-redux';
-import { Router } from 'react-router-dom';
+import PropTypes from 'prop-types';
 
-import './config/ReactotronConfig';
+import { Route, Redirect } from 'react-router-dom';
 
-import Routes from './routes';
-import history from './services/history';
+import AuthLayout from '~/pages/_layouts/auth';
+import DefaultLayout from '~/pages/_layouts/default';
+import store from '~/store';
 
-import store from './store';
+export default function RouteWrapper({
+  // eslint-disable-next-line react/prop-types
+  component: Component,
+  // eslint-disable-next-line react/prop-types
+  isPrivate = false,
+  ...rest
+}) {
+  const { signed } = store.getState().auth;
 
-import GlobalStyle from './styles/global';
+  if (!signed && isPrivate) {
+    return <Redirect to="/" />;
+  }
 
-function App() {
+  if (signed && !isPrivate) {
+    return <Redirect to="dashboard" />;
+  }
+
+  const Layout = signed ? DefaultLayout : AuthLayout;
+
   return (
-    <Provider store={store}>
-      <Router history={history}>
-        <Routes />
-        <GlobalStyle />
-      </Router>
-    </Provider>
+    <Route
+      {...rest}
+      render={props => (
+        <Layout>
+          <Component {...props} />
+        </Layout>
+      )}
+    />
   );
 }
 
-export default App;
+RouteWrapper.propTipes = {
+  isPrivate: PropTypes.bool,
+  component: PropTypes.oneOfType([PropTypes.element, PropTypes.func]),
+};
 
+RouteWrapper.defaultProps = {
+  isPrivate: false,
+};
 ```
 
-Agora vamos no Reactotron para testar, vamos em State e clicamos em Add e criamos o state Auth.
+Agora tentamos logar novamente e deve redirecionar para o Dashboard.
 
-Ficará assim a nossa página:
+Agora podemos fazer o Login com um provider e verificar o State no nosso Reactotron para ver se o mesmo está com o token e está com signed = true.
 
-- Reactotron state:
-
-
-
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-12-Configurando-store
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-13-Autenticacao
