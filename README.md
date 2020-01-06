@@ -2,100 +2,131 @@
 
 Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em NodeJS, vamos controlar rotas privadas, fazer a autenticação JWT e receber um token de autenticação. A autenticação do usuário vai ficar guardada no Redux para sempre que precisarmos do usuário logado, ter acesso ao Nome e avatar.
 
-## Aula 15 - Persistindo Autenticação
+## Aula 16 - Loading de autenticação
 
-Para que quando a gente apertar F5, o nosso usuário não seja deslogado da nossa apliação, iremos usar a lib chamada redux-persist:
+Para deslogar da aplicação devemos limpar o localstorage.
 
-```
-yarn add redux-persist
-```
-
-Com isso criamos ao lado do createStore o arquivo chamado `persistReducers`:
+Iremos para `auth/Reducer`:
 
 ```
-import storage from 'redux-persist/lib/storage';
-import { persistReducer } from 'redux-persist';
+import produce from 'immer';
 
-export default reducers => {
-  const persistedReducer = persistReducer(
-    {
-      key: 'gobarber',
-
-      storage,
-      whitelist: ['auth', 'user'],
-    },
-    reducers
-  );
-
-  return persistedReducer;
+const INITIAL_STATE = {
+  token: null,
+  signed: false,
+  loading: false,
 };
 
+export default function auth(state = INITIAL_STATE, action) {
+  return produce(state, draft => {
+    switch (action.type) {
+      case '@auth/SIGN_IN_REQUEST': {
+        draft.loading = true;
+        break;
+      }
+      case '@auth/SIGN_IN_SUCCESS': {
+        draft.token = action.payload.token;
+        draft.signed = true;
+        draft.loading = false;
+        break;
+      }
+      case '@auth/SIGN_FAILURE': {
+        draft.loading = false;
+        break;
+      }
+      default:
+        draft.loading = false;
+    }
+  });
+}
 ```
 
-Agora vamos ao index do Store:
+Agora vamos no `SignIn/index`:
+
+Importamos o useSelector, definimos uma variável loading que recebe o useSelector e a gente muda no button para quando a variável loading for true, ele apareça a mensagem carregando.
 
 ```
-import { persistStore } from 'redux-persist';
-
-import createSagaMiddleare from 'redux-saga';
-import createStore from './createStore';
-import persistReducers from './persistReducers';
-import rootReducer from './modules/rootReducer';
-import rootSaga from './modules/rootSaga';
-
-const sagaMonitor =
-  process.env.NODE_ENV === 'development'
-    ? console.tron.createSagaMonitor()
-    : null;
-
-const sagaMiddleware = createSagaMiddleare({ sagaMonitor });
-
-const middlewares = [sagaMiddleware];
-
-const store = createStore(persistReducers(rootReducer), middlewares);
-const persistor = persistStore(store);
-
-sagaMiddleware.run(rootSaga);
-export { store, persistor };
-
-```
-
-Vimos que vai dar um erro na aplicação, para isso, vamos em App e no Route, e colocamos { } entre o store.
-
-Com isso, nós agora devemos importar o PersistGate para que a aplicação renderize depois de buscar as informações no storage da nossa aplicação.
-
-no `App.js`:
-
-```
-
 import React from 'react';
-import { PersistGate } from 'redux-persist/integration/react';
-import { Provider } from 'react-redux';
-import { Router } from 'react-router-dom';
 
-import './config/ReactotronConfig';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { Form, Input } from '@rocketseat/unform';
+import * as Yup from 'yup';
+import logo from '~/assets/logo.svg';
 
-import Routes from './routes';
-import history from './services/history';
+import { signInRequest } from '~/store/modules/auth/actions';
 
-import { store, persistor } from './store';
+const schema = Yup.object().shape({
+  email: Yup.string()
+    .email('Insira um email válido')
+    .required('Email é obrigatório'),
+  password: Yup.string().required('A senha é obrigatória'),
+});
 
-import GlobalStyle from './styles/global';
+export default function SignIn() {
+  const dispatch = useDispatch();
+  const loading = useSelector(state => state.auth.loading);
 
-function App() {
+  function handleSubmit({ email, password }) {
+    dispatch(signInRequest(email, password));
+  }
   return (
-    <Provider store={store}>
-      <PersistGate persistor={persistor}>
-        <Router history={history}>
-          <Routes />
-          <GlobalStyle />
-        </Router>
-      </PersistGate>
-    </Provider>
+    <>
+      <img src={logo} alt="GoBarber" />
+      <Form schema={schema} onSubmit={handleSubmit}>
+        <Input name="email" type="email" placeholder="Seu e-mail" />
+        <Input
+          name="password"
+          type="password"
+          placeholder="Sua senha secreta"
+        />
+
+        <button type="submit">{loading ? 'Carregando...' : 'Acessar'}</button>
+        <Link to="/register">Criar conta gratuita</Link>
+      </Form>
+    </>
   );
 }
-
-export default App;
 ```
 
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-15-Persistindo-autenticacao
+Agora deveremos ir no `auth/sagas.js`:
+
+```
+import { takeLatest, call, put, all } from 'redux-saga/effects';
+
+import api from '~/services/api';
+
+import { signInSuccess, signFailure } from './actions';
+import history from '~/services/history';
+
+export function* signIn({ payload }) {
+  try {
+    const { email, password } = payload;
+
+    const response = yield call(api.post, 'sessions', {
+      email,
+      password,
+    });
+
+    const { token, user } = response.data;
+
+    if (!user.provider) {
+      console.tron.error('Usuário não é um prestador');
+      return;
+    }
+
+    yield put(signInSuccess(token, user));
+
+    history.push('/dashboard');
+  } catch (err) {
+    yield put(signFailure());
+  }
+}
+export default all([takeLatest('@auth/SIGN_IN_REQUEST', signIn)]);
+```
+
+Ficando assim a nossa tela com Carregando:
+
+![](imgs/trees/aula-16/loading.png 'Loading')
+
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-16-Loading-de-autenticacao
