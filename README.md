@@ -196,6 +196,6 @@ Ficará assim a nossa página:
 
 - Reactotron state:
 
-![](imgs/trees/aula-12/reactotron.png 'State')
+
 
 Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-12-Configurando-store
