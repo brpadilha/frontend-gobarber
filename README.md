@@ -2,85 +2,63 @@
 
 Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em NodeJS, vamos controlar rotas privadas, fazer a autenticação JWT e receber um token de autenticação. A autenticação do usuário vai ficar guardada no Redux para sempre que precisarmos do usuário logado, ter acesso ao Nome e avatar.
 
-## Aula 07 - Estilos globais
+## Aula 08 - Utilizando Root Import
 
-Cria-se a pasta `Styles` dentro de `src` para criar o `global.js`.
-
-Iremos usar como fonte global a Roboto do google. E configuramos o estilo global:
+Para não ter que ficar utilizando o `../` para navegar entre as pastas, iremos utilizar uma forma mais simples de navegação, primeiro devemos instalar as bitliotecas:
 
 ```
-import { createGlobalStyle } from 'styled-components';
-
-export default createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap');
-
-  *{
-    margin:0;
-    padding:0;
-    outline:0;
-    box-sizing: border-box;
-  }
-
-  *:focus{
-    outline:0;
-  }
-
-  html,body,#root{
-    height:100%;
-  }
-
-  body{
-    -webkit-font-smoothing: antialiased;
-  }
-
-  body,input,button {
-    font: 14px 'Roboto', sans-serif;
-  }
-
-  a {
-    text-decoration: none;
-  }
-
-  ul{
-    list-style: none;
-  }
-
-  button{
-    cursor: pointer;
-  }
-`;
+yarn add customize-cra react-app-rewired -D
 ```
 
-E logo após, nós importamos o global style em App.js.
+```
+yarn add babel-plugin-root-import -D
+```
+
+Criamos o config-`overrides.js` na raiz da aplicação e lá configuramos assim:
 
 ```
-import React from 'react';
+// eslint-disable-next-line import/no-extraneous-dependencies
+const { addBabelPluggin, override } = require('customize-cra');
 
-import { Router } from 'react-router-dom';
+module.exports = override(
+  addBabelPluggin([
+    'babel-plugin-root-import',
+    {
+      rootPathSuffix: 'src',
+    },
+  ])
+);
 
-import './config/ReactotronConfig';
+```
 
-import Routes from './routes';
-import history from './services/history';
+Dentro de `package.json` devemos reconfigurar os `scripts`:
 
-import GlobalStyle from './styles/global';
+```
+"start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
+    "eject": "react-scripts eject"
+```
 
-function App() {
-  return (
-    <Router history={history}>
-      <Routes />
-      <GlobalStyle />
-    </Router>
-  );
+Agora podemos trocar todas as importações de locais que começam com `../` por `~/`.
+
+Agora nós devemos instalar a biblioteca, pois pode dar alguns problemas com eslint:
+
+```
+yarn add eslint-import-resolver-babel-plugin-root-import -D
+```
+
+Para que a gente possa acessar as pastas apertando Comand ou Alt, criamos na raiz o arquivo `jsconfig.json` com a seguinte configuração:
+
+```
+{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "paths": {
+      "~/*": ["*"]
+    }
+  }
 }
-
-export default App;
-
 ```
 
-Resultado final da aula 07:
-
-Profile
-![profile](imgs/trees/aula-07/login.png 'Profile')
-
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-07-Estilos-globais
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-08-Utilizando-Root-Import
