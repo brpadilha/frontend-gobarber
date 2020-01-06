@@ -81,6 +81,6 @@ export default App;
 Resultado final da aula 07:
 
 Profile
-![profile](Images/trees/aula-07/login.png 'Profile')
+![profile](imgs/trees/aula-07/login.png 'Profile')
 
 Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-07-Estilos-globais
