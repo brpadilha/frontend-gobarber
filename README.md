@@ -2,101 +2,42 @@
 
 Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em NodeJS, vamos controlar rotas privadas, fazer a autenticação JWT e receber um token de autenticação. A autenticação do usuário vai ficar guardada no Redux para sempre que precisarmos do usuário logado, ter acesso ao Nome e avatar.
 
-## Aula 18 - Cadastro na aplicação
+## Aula 19 - Requisições autenticadas
 
-Agora será feito o cadastro de usuário na aplicação, para isso iremos criar o signUpRequest no actions do Auth:
+Temos que fazer com que o Token seja carregado em todas as requisições feitas pelo usuário na aplicação:
+Para isso vamos no `auth/sagas.js` e iremos dentro do nosso signIn e consultar os headers da nossa api pelo Authorizations.
 
 ```
-export function signInRequest(email, password) {
-  return {
-    type: '@auth/SIGN_IN_REQUEST',
-    payload: { email, password },
-  };
-}
+    api.defaults.headers.Authorization = `Bearer ${token}`;
 
-export function signInSuccess(token, user) {
-  return {
-    type: '@auth/SIGN_IN_SUCCESS',
-    payload: { token, user },
-  };
-}
-
-export function signUpRequest(name, email, password) {
-  return {
-    type: '@auth/SIGN_UP_REQUEST',
-    payload: { name, email, password },
-  };
-}
-
-export function signFailure() {
-  return {
-    type: '@auth/SIGN_FAILURE ',
-  };
-}
 ```
 
-Agora vamos ao `SignUp/index.js` e importamos o useDispatch from `react-redux`:
+Agora vamos no `Dashboard`:
 
 ```
 import React from 'react';
-import { useDispatch } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { Form, Input } from '@rocketseat/unform';
-import * as Yup from 'yup';
-
-import logo from '~/assets/logo.svg';
-import { signUpRequest } from '~/store/modules/auth/actions';
+import api from '~/services/api';
 
 // import { Container } from './styles';
 
-const schema = Yup.object().shape({
-  name: Yup.string().required('O nome é obrigatório'),
-  email: Yup.string()
-    .email('Insira um email válido')
-    .required('Email é obrigatório'),
-  password: Yup.string()
-    .min(6, 'A senha deve ter no mínimo 6 caracteres')
-    .required('A senha é obrigatória'),
-});
-export default function SignUp() {
-  const dispatch = useDispatch();
-
-  function handleSubmit({ name, email, password }) {
-    dispatch(signUpRequest(name, email, password));
-  }
-  return (
-    <>
-      <img src={logo} alt="GoBarber" />
-
-      <Form schema={schema} onSubmit={handleSubmit}>
-        <Input name="name" placeholder="Nome completo" />
-        <Input name="email" type="email" placeholder="Seu email" />
-
-        <Input
-          name="password"
-          type="password"
-          placeholder="Sua senha secreta"
-        />
-
-        <button type="submit">Criar conta</button>
-        <Link to="/">Já tenho login</Link>
-      </Form>
-    </>
-  );
+export default function Dashboard() {
+  api.get('appointments');
+  return <h1>Dashboard</h1>;
 }
 
 ```
 
-E agora vamos ouvir isso lá no Saga.js:
+Podemos notar pelo Network no navegador, que estamos conseguindo passar o Token, entretanto não esta sendo mantido se apertarmos F5.
+Para isso vamos sagas e ouvir a action Rehydrate:
 
 ```
-
 import { takeLatest, call, put, all } from 'redux-saga/effects';
 import { toast } from 'react-toastify';
+
 import api from '~/services/api';
+import history from '~/services/history';
 
 import { signInSuccess, signFailure } from './actions';
-import history from '~/services/history';
 
 export function* signIn({ payload }) {
   try {
@@ -114,15 +55,16 @@ export function* signIn({ payload }) {
       return;
     }
 
+    api.defaults.headers.Authorization = `Bearer ${token}`;
+
     yield put(signInSuccess(token, user));
 
     history.push('/dashboard');
   } catch (err) {
-    toast.error('Falha na autenticação do usuário, verifique os seus dados');
+    toast.error('Falha na autenticação, verifique seus dados');
     yield put(signFailure());
   }
 }
-
 export function* signUp({ payload }) {
   try {
     const { name, email, password } = payload;
@@ -136,11 +78,22 @@ export function* signUp({ payload }) {
 
     history.push('/');
   } catch (err) {
-    toast.error('Falha em cadastrar o usuário, verifique os dados.');
+    toast.error('Falha no cadastro, verifique seus dados!');
+
     yield put(signFailure());
   }
 }
+export function setToken({ payload }) {
+  if (!payload) return;
+
+  const { token } = payload.auth;
+
+  if (token) {
+    api.defaults.headers.Authorization = `Bearer ${token}`;
+  }
+}
 export default all([
+  takeLatest('persist/REHYDRATE', setToken),
   takeLatest('@auth/SIGN_IN_REQUEST', signIn),
   takeLatest('@auth/SIGN_UP_REQUEST', signUp),
 ]);
@@ -148,8 +101,4 @@ export default all([
 
 Agora nós conseguimos fazer o cadastro do usuário.
 
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-18-Cadastro-na-aplicacao
-
-```
-
-```
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-19-Requisicoes-autenticadas
