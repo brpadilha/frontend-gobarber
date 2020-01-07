@@ -66,8 +66,90 @@ export default all([takeLatest('@user/UPDATE_PROFILE_REQUEST', updateProfile)]);
 
 ```
 
-Ficando assim a página do perfil:
+E dentro do Reducer:
 
-![](imgs/trees/aula-23/meuperfil.png 'Perfil')
+```
+import produce from 'immer';
 
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-23-Pagina-de-perfil
+const INITIAL_STATE = {
+  profile: null,
+};
+
+export default function user(state = INITIAL_STATE, action) {
+  return produce(state, draft => {
+    switch (action.type) {
+      case '@auth/SIGN_IN_SUCCESS': {
+        draft.profile = action.payload.user;
+        break;
+      }
+      case '@user/UPDATE_PROFILE_SUCCESS': {
+        draft.profile = action.payload.profile;
+        break;
+      }
+      case '@auth/SIGN_OUT': {
+        draft.profile = null;
+        break;
+      }
+      default:
+    }
+  });
+}
+
+```
+
+E no Index.js do usuário ficará assim:
+
+```
+
+import React from 'react';
+import { Form, Input } from '@rocketseat/unform';
+import { useSelector, useDispatch } from 'react-redux';
+import { Container } from './styles';
+// import AvatarInput from './AvatarInput';
+
+// import { signOut } from '~/store/modules/auth/actions';
+import { updateProfileRequest } from '~/store/modules/user/actions';
+
+export default function Profile() {
+  const profile = useSelector(state => state.user.profile);
+  const dispatch = useDispatch();
+
+  function handleSubmit(data) {
+    dispatch(updateProfileRequest(data));
+    // console.tron.log(data);
+  }
+
+  // function handleSignOut() {
+  //   dispatch(signOut());
+  // }
+
+  return (
+    <Container>
+      <Form initialData={profile} onSubmit={handleSubmit}>
+        {/* <AvatarInput name="avatar_id" /> */}
+
+        <Input name="name" placeholder="Nome completo" />
+        <Input name="email" placeholder="Seu endereço completo" />
+        <hr />
+        <Input
+          type="password"
+          name="oldPassword"
+          placeholder="Sua senha atual"
+        />
+        <Input type="password" name="password" placeholder="Nova senha" />
+        <Input
+          type="password"
+          name="confirmPassword"
+          placeholder="Confirmação de senha"
+        />
+
+        <button type="submit">Atualizar perfil</button>
+      </Form>
+
+      <button type="submit">Sair do Gobarber</button>
+    </Container>
+  );
+}
+```
+
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-24-Atualizando-perfil
