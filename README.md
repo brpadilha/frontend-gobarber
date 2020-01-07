@@ -4,125 +4,59 @@ Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em No
 
 ## Aula 16 - Loading de autenticação
 
-Para deslogar da aplicação devemos limpar o localstorage.
-
-Iremos para `auth/Reducer`:
+Agora nós iremos exibir as notificações para o usuário de que o mesmo não consegue logar ou que conseguiu logar com sucesso na conta. Para isso devemos instalar o Toastify:
 
 ```
-import produce from 'immer';
-
-const INITIAL_STATE = {
-  token: null,
-  signed: false,
-  loading: false,
-};
-
-export default function auth(state = INITIAL_STATE, action) {
-  return produce(state, draft => {
-    switch (action.type) {
-      case '@auth/SIGN_IN_REQUEST': {
-        draft.loading = true;
-        break;
-      }
-      case '@auth/SIGN_IN_SUCCESS': {
-        draft.token = action.payload.token;
-        draft.signed = true;
-        draft.loading = false;
-        break;
-      }
-      case '@auth/SIGN_FAILURE': {
-        draft.loading = false;
-        break;
-      }
-      default:
-        draft.loading = false;
-    }
-  });
-}
+yarn add react-toastify
 ```
 
-Agora vamos no `SignIn/index`:
-
-Importamos o useSelector, definimos uma variável loading que recebe o useSelector e a gente muda no button para quando a variável loading for true, ele apareça a mensagem carregando.
+Agora devemos ir no App.js e importar o ToastContainer e colocar dentro do return:
 
 ```
 import React from 'react';
+import { ToastContainer } from 'react-toastify';
+import { PersistGate } from 'redux-persist/integration/react';
+import { Provider } from 'react-redux';
+import { Router } from 'react-router-dom';
 
-import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { Form, Input } from '@rocketseat/unform';
-import * as Yup from 'yup';
-import logo from '~/assets/logo.svg';
+import './config/ReactotronConfig';
 
-import { signInRequest } from '~/store/modules/auth/actions';
+import Routes from './routes';
+import history from './services/history';
 
-const schema = Yup.object().shape({
-  email: Yup.string()
-    .email('Insira um email válido')
-    .required('Email é obrigatório'),
-  password: Yup.string().required('A senha é obrigatória'),
-});
+import { store, persistor } from './store';
 
-export default function SignIn() {
-  const dispatch = useDispatch();
-  const loading = useSelector(state => state.auth.loading);
+import GlobalStyle from './styles/global';
 
-  function handleSubmit({ email, password }) {
-    dispatch(signInRequest(email, password));
-  }
+function App() {
   return (
-    <>
-      <img src={logo} alt="GoBarber" />
-      <Form schema={schema} onSubmit={handleSubmit}>
-        <Input name="email" type="email" placeholder="Seu e-mail" />
-        <Input
-          name="password"
-          type="password"
-          placeholder="Sua senha secreta"
-        />
-
-        <button type="submit">{loading ? 'Carregando...' : 'Acessar'}</button>
-        <Link to="/register">Criar conta gratuita</Link>
-      </Form>
-    </>
+    <Provider store={store}>
+      <PersistGate persistor={persistor}>
+        <Router history={history}>
+          <Routes />
+          <GlobalStyle />
+          <ToastContainer autoclose={3000} />
+        </Router>
+      </PersistGate>
+    </Provider>
   );
 }
+
+export default App;
+
 ```
 
-Agora deveremos ir no `auth/sagas.js`:
+Agora devemos importar dentro do `global.js` os estilos do toastify:
 
 ```
-import { takeLatest, call, put, all } from 'redux-saga/effects';
+import 'react-toastify/dist/ReactToastify.css';
 
-import api from '~/services/api';
+```
 
-import { signInSuccess, signFailure } from './actions';
-import history from '~/services/history';
+Agora dentro do `sagas.js` nós importamos o toast e passamos no lugar do controle.tron.error:
 
-export function* signIn({ payload }) {
-  try {
-    const { email, password } = payload;
+```
 
-    const response = yield call(api.post, 'sessions', {
-      email,
-      password,
-    });
-
-    const { token, user } = response.data;
-
-    if (!user.provider) {
-      console.tron.error('Usuário não é um prestador');
-      return;
-    }
-
-    yield put(signInSuccess(token, user));
-
-    history.push('/dashboard');
-  } catch (err) {
-    yield put(signFailure());
-  }
-}
-export default all([takeLatest('@auth/SIGN_IN_REQUEST', signIn)]);
 ```
 
 Ficando assim a nossa tela com Carregando:
