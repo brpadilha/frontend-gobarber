@@ -4,13 +4,103 @@ Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em No
 
 Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-23-Pagina-de-perfil
 
-## Aula 23 - Página do Perfil
+## Aula 24 - Atualizando perfil
 
-Agora para fazer a página do perfil vamos em /Profile e criamos já o styled.js e configuramos o index.js.
+Para que a gente possa ver que estamos colhendo as informações da página, podemos dar um consle.tron.log(data) dentro da função handleSubmit(data), mas para a gente colher, temos que ir lá na Actions de usuário e começar a criar a nossa Action para atualizar o perfil.
 
-Index.js
+user/Actions.js:
 
 ```
+export function updateProfileRequest(data) {
+  return {
+    type: '@user/UPDATE_PROFILE_REQUEST',
+    payload: { data },
+  };
+}
+
+export function updateProfileSuccess(profile) {
+  return {
+    type: '@user/UPDATE_PROFILE_SUCCESS',
+    payload: { profile },
+  };
+}
+
+export function updateProfileFailure() {
+  return {
+    type: '@user/UPDATE_PROFILE_FAILURE',
+  };
+}
+```
+
+user/Sagas.js:
+
+```
+
+import { takeLatest, call, put, all } from 'redux-saga/effects';
+import { toast } from 'react-toastify';
+import api from '~/services/api';
+import { updateProfileSuccess, updateProfileFailure } from './actions';
+
+export function* updateProfile({ payload }) {
+  try {
+    const { name, email, ...rest } = payload.data;
+
+    const profile = {
+      name,
+      email,
+      ...(rest.oldPassword ? rest : {}),
+    };
+
+    const response = yield call(api.put, 'users', profile);
+
+    toast.success('Perfil atualizado com sucesso!');
+
+    yield put(updateProfileSuccess(response.data));
+  } catch (error) {
+    toast.error('Erro ao atualizar Perfil');
+    yield put(updateProfileFailure());
+  }
+}
+
+export default all([takeLatest('@user/UPDATE_PROFILE_REQUEST', updateProfile)]);
+
+```
+
+E dentro do Reducer:
+
+```
+import produce from 'immer';
+
+const INITIAL_STATE = {
+  profile: null,
+};
+
+export default function user(state = INITIAL_STATE, action) {
+  return produce(state, draft => {
+    switch (action.type) {
+      case '@auth/SIGN_IN_SUCCESS': {
+        draft.profile = action.payload.user;
+        break;
+      }
+      case '@user/UPDATE_PROFILE_SUCCESS': {
+        draft.profile = action.payload.profile;
+        break;
+      }
+      case '@auth/SIGN_OUT': {
+        draft.profile = null;
+        break;
+      }
+      default:
+    }
+  });
+}
+
+```
+
+E no Index.js do usuário ficará assim:
+
+```
+
 import React from 'react';
 import { Form, Input } from '@rocketseat/unform';
 import { useSelector, useDispatch } from 'react-redux';
@@ -26,6 +116,7 @@ export default function Profile() {
 
   function handleSubmit(data) {
     dispatch(updateProfileRequest(data));
+    // console.tron.log(data);
   }
 
   // function handleSignOut() {
@@ -59,89 +150,6 @@ export default function Profile() {
     </Container>
   );
 }
-
 ```
 
-Styles.js:
-
-```
-import styled from 'styled-components';
-import { darken } from 'polished';
-
-export const Container = styled.div`
-  max-width: 600px;
-  margin: 50px auto;
-
-  form {
-    display: flex;
-    flex-direction: column;
-    margin-top: 30px;
-
-    input {
-      background: rgba(0, 0, 0, 0.1);
-      border: 0;
-      border-radius: 4px;
-      height: 44px;
-      padding: 0 15px;
-      color: #fff;
-      margin: 0 0 10px;
-
-      &::placeholder {
-        color: rgba(255, 255, 255, 0.7);
-      }
-    }
-    span {
-      color: #fb6f91;
-      align-self: flex-start;
-      margin: 0 0 10px;
-      font-weight: bold;
-    }
-
-    hr {
-      border: 0;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.2);
-      margin: 10px 0 20px;
-    }
-
-    button {
-      margin: 5px 0 0;
-      height: 44px;
-      background: #3b9eff;
-      font-weight: bold;
-      color: #fff;
-      border: 0;
-      border-radius: 4px;
-      font-size: 16px;
-      transition: background 0.2s;
-
-      &:hover {
-        background: ${darken(0.06, '#3b9eff')};
-      }
-    }
-  }
-  > button {
-    width: 100%;
-    margin: 5px 0 0;
-    height: 44px;
-    background: #f64c75;
-    font-weight: bold;
-    color: #fff;
-    border: 0;
-    border-radius: 4px;
-    font-size: 16px;
-    transition: background 0.2s;
-
-    &:hover {
-      background: ${darken(0.08, '#f64c75')};
-    }
-  }
-`;
-
-```
-
-Ficando assim a página do perfil:
-
-![](imgs/trees/aula-23/meuperfil.png 'Perfil')
-
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-23-Pagina-de-perfil
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-24-Atualizando-perfil
