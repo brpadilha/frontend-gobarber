@@ -4,101 +4,144 @@ Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em No
 
 ## Aula 19 - Requisições autenticadas
 
-Temos que fazer com que o Token seja carregado em todas as requisições feitas pelo usuário na aplicação:
-Para isso vamos no `auth/sagas.js` e iremos dentro do nosso signIn e consultar os headers da nossa api pelo Authorizations.
+Agora será feito o layout do Header da aplicação, para isso vamos em `default/styles.js`:
 
 ```
-    api.defaults.headers.Authorization = `Bearer ${token}`;
+import styled from 'styled-components';
+
+export const Wrapper = styled.div`
+  height: 100%;
+  background: linear-gradient(-90deg, #7159c1, #ab59c1);
+`;
 
 ```
 
-Agora vamos no `Dashboard`:
+Agora criamos uma pasta `Components` e dentro dela iremos ter o `Header` com index.js e o `styled.js`:
+
+index.js:
 
 ```
 import React from 'react';
-import api from '~/services/api';
+import { useSelector } from 'react-redux';
 
-// import { Container } from './styles';
+import { Link } from 'react-router-dom';
+import logo from '~/assets/logo-purple.svg';
+import { Container, Profile, Content } from './styles';
 
-export default function Dashboard() {
-  api.get('appointments');
-  return <h1>Dashboard</h1>;
+export default function Header() {
+  const profile = useSelector(state => state.user.profile);
+
+  return (
+    <Container>
+      <Content>
+        <nav>
+          <img src={logo} alt="GoBarber" />
+          <Link to="/dashboard">Dashboard</Link>
+        </nav>
+        <aside>
+          <Profile>
+            <div>
+              <strong>{profile.name}</strong>
+              <Link to="/profile">Meu perfil</Link>
+            </div>
+            <img
+              src="https://api.adorable.io/avatars/50/abott@adorable.png"
+              alt="Diego Fernandes"
+            />
+          </Profile>
+        </aside>
+      </Content>
+    </Container>
+  );
 }
-
 ```
 
-Podemos notar pelo Network no navegador, que estamos conseguindo passar o Token, entretanto não esta sendo mantido se apertarmos F5.
-Para isso vamos sagas e ouvir a action Rehydrate:
+Styles.js
 
 ```
-import { takeLatest, call, put, all } from 'redux-saga/effects';
-import { toast } from 'react-toastify';
+import styled from 'styled-components';
 
-import api from '~/services/api';
-import history from '~/services/history';
+export const Container = styled.div`
+  background: #fff;
+  padding: 0 30px;
+`;
+export const Content = styled.div`
+  height: 64px;
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 
-import { signInSuccess, signFailure } from './actions';
+  nav {
+    display: flex;
+    align-items: center;
 
-export function* signIn({ payload }) {
-  try {
-    const { email, password } = payload;
-
-    const response = yield call(api.post, 'sessions', {
-      email,
-      password,
-    });
-
-    const { token, user } = response.data;
-
-    if (!user.provider) {
-      toast.error('Usuário não é um prestador');
-      return;
+    img {
+      margin-right: 20px;
+      padding-right: 20px;
+      border-right: 1px solid #eee;
     }
-
-    api.defaults.headers.Authorization = `Bearer ${token}`;
-
-    yield put(signInSuccess(token, user));
-
-    history.push('/dashboard');
-  } catch (err) {
-    toast.error('Falha na autenticação, verifique seus dados');
-    yield put(signFailure());
+    a {
+      font-weight: bold;
+      color: #7159c1;
+    }
   }
-}
-export function* signUp({ payload }) {
-  try {
-    const { name, email, password } = payload;
-
-    yield call(api.post, 'users', {
-      name,
-      email,
-      password,
-      provider: true,
-    });
-
-    history.push('/');
-  } catch (err) {
-    toast.error('Falha no cadastro, verifique seus dados!');
-
-    yield put(signFailure());
+  aside {
+    display: flex;
+    align-items: center;
   }
-}
-export function setToken({ payload }) {
-  if (!payload) return;
+`;
+export const Profile = styled.div`
+  display: flex;
+  margin-left: 20px;
+  padding-left: 20px;
+  border-left: 1px solid #eee;
 
-  const { token } = payload.auth;
+  div {
+    text-align: right;
+    margin-right: 10px;
 
-  if (token) {
-    api.defaults.headers.Authorization = `Bearer ${token}`;
+    strong {
+      display: block;
+      color: #333;
+    }
+    a {
+      display: block;
+      margin-top: 2px;
+      font-size: 12px;
+      color: #999;
+    }
   }
-}
-export default all([
-  takeLatest('persist/REHYDRATE', setToken),
-  takeLatest('@auth/SIGN_IN_REQUEST', signIn),
-  takeLatest('@auth/SIGN_UP_REQUEST', signUp),
-]);
+  img {
+    height: 32px;
+    border-radius: 50%;
+  }
+`;
 ```
 
-Agora nós conseguimos fazer o cadastro do usuário.
+Agora para a gente visualizar, vamos em `default/index.js` e importamos o Header da nossa aplicação lá e colocamos antes do {children}:
 
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-19-Requisicoes-autenticadas
+```
+import React from 'react';
+import { PropTypes } from 'prop-types';
+
+import Header from '~/components/Header/index';
+import { Wrapper } from './styles';
+
+export default function DefaultLayout({ children }) {
+  return (
+    <Wrapper>
+      <Header />
+      {children}
+    </Wrapper>
+  );
+}
+
+DefaultLayout.propTypes = {
+  children: PropTypes.element.isRequired,
+};
+
+```
+
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-20-Configurando-header
