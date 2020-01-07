@@ -2,60 +2,95 @@
 
 Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em NodeJS, vamos controlar rotas privadas, fazer a autenticação JWT e receber um token de autenticação. A autenticação do usuário vai ficar guardada no Redux para sempre que precisarmos do usuário logado, ter acesso ao Nome e avatar.
 
-## Aula 17 - Exibindo toasts
+## Aula 18 - Cadastro na aplicação
 
-Agora nós iremos exibir as notificações para o usuário de que o mesmo não consegue logar ou que conseguiu logar com sucesso na conta. Para isso devemos instalar o Toastify:
+Agora será feito o cadastro de usuário na aplicação, para isso iremos criar o signUpRequest no actions do Auth:
 
 ```
-yarn add react-toastify
+export function signInRequest(email, password) {
+  return {
+    type: '@auth/SIGN_IN_REQUEST',
+    payload: { email, password },
+  };
+}
+
+export function signInSuccess(token, user) {
+  return {
+    type: '@auth/SIGN_IN_SUCCESS',
+    payload: { token, user },
+  };
+}
+
+export function signUpRequest(name, email, password) {
+  return {
+    type: '@auth/SIGN_UP_REQUEST',
+    payload: { name, email, password },
+  };
+}
+
+export function signFailure() {
+  return {
+    type: '@auth/SIGN_FAILURE ',
+  };
+}
 ```
 
-Agora devemos ir no App.js e importar o ToastContainer e colocar dentro do return:
+Agora vamos ao `SignUp/index.js` e importamos o useDispatch from `react-redux`:
 
 ```
 import React from 'react';
-import { ToastContainer } from 'react-toastify';
-import { PersistGate } from 'redux-persist/integration/react';
-import { Provider } from 'react-redux';
-import { Router } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { Form, Input } from '@rocketseat/unform';
+import * as Yup from 'yup';
 
-import './config/ReactotronConfig';
+import logo from '~/assets/logo.svg';
+import { signUpRequest } from '~/store/modules/auth/actions';
 
-import Routes from './routes';
-import history from './services/history';
+// import { Container } from './styles';
 
-import { store, persistor } from './store';
+const schema = Yup.object().shape({
+  name: Yup.string().required('O nome é obrigatório'),
+  email: Yup.string()
+    .email('Insira um email válido')
+    .required('Email é obrigatório'),
+  password: Yup.string()
+    .min(6, 'A senha deve ter no mínimo 6 caracteres')
+    .required('A senha é obrigatória'),
+});
+export default function SignUp() {
+  const dispatch = useDispatch();
 
-import GlobalStyle from './styles/global';
-
-function App() {
+  function handleSubmit({ name, email, password }) {
+    dispatch(signUpRequest(name, email, password));
+  }
   return (
-    <Provider store={store}>
-      <PersistGate persistor={persistor}>
-        <Router history={history}>
-          <Routes />
-          <GlobalStyle />
-          <ToastContainer autoclose={3000} />
-        </Router>
-      </PersistGate>
-    </Provider>
+    <>
+      <img src={logo} alt="GoBarber" />
+
+      <Form schema={schema} onSubmit={handleSubmit}>
+        <Input name="name" placeholder="Nome completo" />
+        <Input name="email" type="email" placeholder="Seu email" />
+
+        <Input
+          name="password"
+          type="password"
+          placeholder="Sua senha secreta"
+        />
+
+        <button type="submit">Criar conta</button>
+        <Link to="/">Já tenho login</Link>
+      </Form>
+    </>
   );
 }
 
-export default App;
+```
+
+E agora vamos ouvir isso lá no Saga.js:
 
 ```
 
-Agora devemos importar dentro do `global.js` os estilos do toastify:
-
-```
-import 'react-toastify/dist/ReactToastify.css';
-
-```
-
-Agora dentro do `sagas.js` nós importamos o toast e passamos no lugar do controle.tron.error:
-
-```
 import { takeLatest, call, put, all } from 'redux-saga/effects';
 import { toast } from 'react-toastify';
 import api from '~/services/api';
@@ -87,12 +122,34 @@ export function* signIn({ payload }) {
     yield put(signFailure());
   }
 }
-export default all([takeLatest('@auth/SIGN_IN_REQUEST', signIn)]);
+
+export function* signUp({ payload }) {
+  try {
+    const { name, email, password } = payload;
+
+    yield call(api.post, 'users', {
+      name,
+      email,
+      password,
+      provider: true,
+    });
+
+    history.push('/');
+  } catch (err) {
+    toast.error('Falha em cadastrar o usuário, verifique os dados.');
+    yield put(signFailure());
+  }
+}
+export default all([
+  takeLatest('@auth/SIGN_IN_REQUEST', signIn),
+  takeLatest('@auth/SIGN_UP_REQUEST', signUp),
+]);
+```
+
+Agora nós conseguimos fazer o cadastro do usuário.
+
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-18-Cadastro-na-aplicacao
 
 ```
 
-Ficando assim a nossa tela com Erro:
-
-![](imgs/trees/aula-17/erro-toast-1.png 'Erro login')
-
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-17-Exibindo-toasts
+```
