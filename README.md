@@ -2,144 +2,103 @@
 
 Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em NodeJS, vamos controlar rotas privadas, fazer a autenticação JWT e receber um token de autenticação. A autenticação do usuário vai ficar guardada no Redux para sempre que precisarmos do usuário logado, ter acesso ao Nome e avatar.
 
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-24-Atualizando-perfil
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-27-Logout-da-aplicacao
 
-## Aula 25 - Foto de perfil
+## Aula 27 - Logout da aplicação
 
-Agora será capaz de inserir a foto de perfil do usuário. Para isso criamos dentro de /Profile a pasta AvatarInput/index.js. Que será o Container para a página do profile.
-
-`AvatarInput/Index.js`:
+Agora para nós fazermos o logout devemos criar uma action de signOut dentro do auth/sagas:
 
 ```
+export function signOut() {
+  return {
+    type: '@auth/SIGN_OUT',
+  };
+}
+
+```
+
+Com isso no Reducer, a gente chama essa action e setamos o token como nulo e o signed como false.
+
+```
+case '@auth/SIGN_OUT': {
+        draft.token = null;
+        draft.signed = false;
+        break;
+      }
+```
+
+E também devemos ouvir essa action no reducer de usuário e setar o profile como null.:
+
+```
+case '@auth/SIGN_OUT': {
+        draft.profile = null;
+        break;
+      }
+```
+
+E agora por último abrimos o saga de Autenticação e colocamos para ouvir o signOut e damos um hisoty.push('/') que ele vai deslogar automaticamente:
+
+```
+export function signOut() {
+  history.push('/');
+}
+```
+
+E assim vamos no Profile e importamos essa action SignOut e colocamos ela para funcionar:
+
+```
+
 import React from 'react';
-import { useField } from '@rocketseat/unform';
-
+import { Form, Input } from '@rocketseat/unform';
+import { useSelector, useDispatch } from 'react-redux';
 import { Container } from './styles';
+import AvatarInput from './AvatarInput';
 
-export default function AvatarInput() {
-  function handleChange(e) {}
+import { signOut } from '~/store/modules/auth/actions';
+import { updateProfileRequest } from '~/store/modules/user/actions';
 
-  return (
-    <Container>
-      <label htmlFor="avatar">
-        <img src="" alt="" />
+export default function Profile() {
+  const profile = useSelector(state => state.user.profile);
+  const dispatch = useDispatch();
 
-        <input
-          type="file"
-          name=""
-          id="avatar"
-          accept="image/*" // faz aceitar somente imagem
-          onChange={handleChange}
-        />
-      </label>
-    </Container>
-  );
-}
+  function handleSubmit(data) {
+    dispatch(updateProfileRequest(data));
+    // console.tron.log(data);
+  }
 
-```
-
-`AvatarInput/styles.js`
-
-```
-import React, { useState, useRef, useEffect } from 'react';
-import { useField } from '@rocketseat/unform';
-
-import { Container } from './styles';
-import api from '~/services/api';
-
-export default function AvatarInput() {
-  const ref = useRef();
-  const { defaultValue, registerField } = useField('avatar');
-
-  const [file, setFile] = useState(defaultValue && defaultValue.id);
-  const [preview, setPreview] = useState(defaultValue && defaultValue.url);
-
-  useEffect(() => {
-    if (ref.current) {
-      registerField({
-        name: 'avatar_id',
-        ref: ref.current,
-        path: 'dataset.file',
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ref.current]);
-
-  async function handleChange(e) {
-    const data = new FormData();
-
-    data.append('file', e.target.files[0]);
-
-    const response = await api.post('files', data);
-
-    const { id, url } = response.data;
-
-    setFile(id);
-    setPreview(url);
+  function handleSignOut() {
+    dispatch(signOut());
   }
 
   return (
     <Container>
-      <label htmlFor="avatar">
-        <img
-          src={
-            preview || 'https://api.adorable.io/avatars/50/abott@adorable.png'
-          }
-          alt=""
+      <Form initialData={profile} onSubmit={handleSubmit}>
+        <AvatarInput name="avatar_id" />
+
+        <Input name="name" placeholder="Nome completo" />
+        <Input name="email" placeholder="Seu endereço completo" />
+        <hr />
+        <Input
+          type="password"
+          name="oldPassword"
+          placeholder="Sua senha atual"
+        />
+        <Input type="password" name="password" placeholder="Nova senha" />
+        <Input
+          type="password"
+          name="confirmPassword"
+          placeholder="Confirmação de senha"
         />
 
-        <input
-          type="file"
-          id="avatar"
-          accept="image/*" // faz aceitar somente imagem
-          data-file={file}
-          onChange={handleChange}
-          ref={ref}
-        />
-      </label>
+        <button type="submit">Atualizar perfil</button>
+      </Form>
+
+      <button type="submit" onClick={handleSignOut}>
+        Sair do Gobarber
+      </button>
     </Container>
   );
 }
-
-
 ```
 
-Agora para podermos fazer com que atualize a foto no banco de dados, vamos no Sagas.js do user, e colocamos para receber além de `name, email e ... rest`, para receber também o `avatar_id` que estamos enviando.
-
-`user/sagas.js`
-
-```
-import { takeLatest, call, put, all } from 'redux-saga/effects';
-import { toast } from 'react-toastify';
-import api from '~/services/api';
-import { updateProfileSuccess, updateProfileFailure } from './actions';
-
-export function* updateProfile({ payload }) {
-  try {
-    const { name, email, avatar_id, ...rest } = payload.data;
-
-    const profile = {
-      name,
-      email,
-      avatar_id,
-      ...(rest.oldPassword ? rest : {}),
-    };
-
-    const response = yield call(api.put, 'users', profile);
-
-    toast.success('Perfil atualizado com sucesso!');
-
-    yield put(updateProfileSuccess(response.data));
-  } catch (error) {
-    toast.error('Erro ao atualizar Perfil');
-    yield put(updateProfileFailure());
-  }
-}
-
-export default all([takeLatest('@user/UPDATE_PROFILE_REQUEST', updateProfile)]);
-
-```
-
-Podemos ver agora que podemos trocara a nossa foto de perfil:
-
-![](imgs/trees/aula-25/fotoprofile.png 'profile')
+Assim podemos testar e ver que está funcionando perfeitamente.
