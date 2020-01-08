@@ -2,103 +2,154 @@
 
 Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em NodeJS, vamos controlar rotas privadas, fazer a autenticação JWT e receber um token de autenticação. A autenticação do usuário vai ficar guardada no Redux para sempre que precisarmos do usuário logado, ter acesso ao Nome e avatar.
 
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-27-Logout-da-aplicacao
+Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-28-Estilizacao-da-Dashboard
 
-## Aula 27 - Logout da aplicação
+## Aula 28 - Estilizaçao da dashboard
 
-Agora para nós fazermos o logout devemos criar uma action de signOut dentro do auth/sagas:
+Agora para estilizarmos a Dashboard devemos criar um styles.js dentro da pasta Dashboard.
 
-```
-export function signOut() {
-  return {
-    type: '@auth/SIGN_OUT',
-  };
-}
+Criamos um Header para ter acessos aos botões de passar e voltar os dias da agenda.
+
+`Dashboard/index.js`:
 
 ```
-
-Com isso no Reducer, a gente chama essa action e setamos o token como nulo e o signed como false.
-
-```
-case '@auth/SIGN_OUT': {
-        draft.token = null;
-        draft.signed = false;
-        break;
-      }
-```
-
-E também devemos ouvir essa action no reducer de usuário e setar o profile como null.:
-
-```
-case '@auth/SIGN_OUT': {
-        draft.profile = null;
-        break;
-      }
-```
-
-E agora por último abrimos o saga de Autenticação e colocamos para ouvir o signOut e damos um hisoty.push('/') que ele vai deslogar automaticamente:
-
-```
-export function signOut() {
-  history.push('/');
-}
-```
-
-E assim vamos no Profile e importamos essa action SignOut e colocamos ela para funcionar:
-
-```
-
 import React from 'react';
-import { Form, Input } from '@rocketseat/unform';
-import { useSelector, useDispatch } from 'react-redux';
+import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
+// import api from '~/services/api';
+
 import { Container } from './styles';
-import AvatarInput from './AvatarInput';
 
-import { signOut } from '~/store/modules/auth/actions';
-import { updateProfileRequest } from '~/store/modules/user/actions';
-
-export default function Profile() {
-  const profile = useSelector(state => state.user.profile);
-  const dispatch = useDispatch();
-
-  function handleSubmit(data) {
-    dispatch(updateProfileRequest(data));
-    // console.tron.log(data);
-  }
-
-  function handleSignOut() {
-    dispatch(signOut());
-  }
-
+export default function Dashboard() {
   return (
     <Container>
-      <Form initialData={profile} onSubmit={handleSubmit}>
-        <AvatarInput name="avatar_id" />
-
-        <Input name="name" placeholder="Nome completo" />
-        <Input name="email" placeholder="Seu endereço completo" />
-        <hr />
-        <Input
-          type="password"
-          name="oldPassword"
-          placeholder="Sua senha atual"
-        />
-        <Input type="password" name="password" placeholder="Nova senha" />
-        <Input
-          type="password"
-          name="confirmPassword"
-          placeholder="Confirmação de senha"
-        />
-
-        <button type="submit">Atualizar perfil</button>
-      </Form>
-
-      <button type="submit" onClick={handleSignOut}>
-        Sair do Gobarber
-      </button>
+      <header>
+        <button type="button">
+          <MdChevronLeft size={36} color="#FFF" />
+        </button>
+        <strong>31 de Maio</strong>
+        <button type="button">
+          <MdChevronRight size={36} color="#FFF" />
+        </button>
+      </header>
     </Container>
   );
 }
+``
 ```
 
-Assim podemos testar e ver que está funcionando perfeitamente.
+Com isso vamos começar estilizando o Header.
+
+```
+import styled from 'styled-components';
+
+export const Container = styled.div`
+  max-width: 600px;
+  margin: 50px auto;
+  display: flex;
+  flex-direction: column;
+
+  header {
+    display: flex;
+    align-self: center;
+    align-items: center;
+
+    button {
+      border: 0;
+      background: none;
+    }
+
+    strong {
+      color: #fff;
+      font-size: 24px;
+      margin: 0 15px;
+    }
+  }
+`;
+```
+
+Agora vamos fazer uma lista no index (ul) para que mostre os agendamentos, vamos mostrar os horários que estão agendados e os que estão em aberto, para isso nos de aberto, vamos criar uma tag de `available`, para que a gente estilize ele de forma diferente.
+
+E também vamos colocar uma tag `past` nos que ja passaram, para a gente diminuir a opacidade dele.`
+
+```
+ <ul>
+        <Time past>
+          <strong>08:00</strong>
+          <span>Diego Fernandes</span>
+        </Time>
+        <Time available>
+          <strong>09:00</strong>
+          <span>Em aberto</span>
+        </Time>
+        <Time>
+          <strong>10:00</strong>
+          <span>Diego Fernandes</span>
+        </Time>
+        <Time>
+          <strong>11:00</strong>
+          <span>Diego Fernandes</span>
+        </Time>
+      </ul>
+```
+
+Agora estilizando o Time, ficará assim o styles.js:
+
+```
+import styled from 'styled-components';
+
+export const Container = styled.div`
+  max-width: 600px;
+  margin: 50px auto;
+  display: flex;
+  flex-direction: column;
+
+  header {
+    display: flex;
+    align-self: center;
+    align-items: center;
+
+    button {
+      border: 0;
+      background: none;
+    }
+
+    strong {
+      color: #fff;
+      font-size: 24px;
+      margin: 0 15px;
+    }
+  }
+
+  ul {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 15px;
+    margin-top: 30px;
+  }
+`;
+
+export const Time = styled.li`
+  padding: 20px;
+  border-radius: 4px;
+  background: #fff;
+
+  opacity: ${props => (props.past ? 0.6 : 1)};
+
+  strong {
+    display: block;
+    color: ${props => (props.available ? '#999' : '#7159c1')};
+    font-size: 20px;
+    font-weight: normal;
+  }
+
+  span {
+    display: block;
+    margin-top: 3px;
+    color: ${props => (props.available ? '#999' : '#7159c1')};
+  }
+`;
+```
+
+Com isso nossa página de agendamento ficou dessa forma:
+
+![](imgs/trees/aula-28/agenda.png 'Dashboard')
