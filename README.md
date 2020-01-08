@@ -1,101 +1,94 @@
-# GoBarber Web
+# GoBarber Web - A Front-end React project
 
-Vamos contruir o GoBarber WEB que vai consumir a API Rest Gobarber Backend em NodeJS, vamos controlar rotas privadas, fazer a autenticação JWT e receber um token de autenticação. A autenticação do usuário vai ficar guardada no Redux para sempre que precisarmos do usuário logado, ter acesso ao Nome e avatar.
+- Register
 
-Código: https://github.com/brpadilha/frontend-gobarber/tree/Aula-30-Listando-agendamentos
+![cadastro](imgs/trees/final/cadastro.png 'Cadastro')
 
-## Aula 30 - Listando agendamentos
+---
 
-Para lidar com agendamento vc basicamente vai ter que lidar com time
+- Login
+
+![login](imgs/trees/final/login.png 'Login')
+
+---
+
+- Profile
+
+![profile](imgs/trees/final/perfil.png 'Profile')
+
+---
+
+- Dashboard
+
+![dashboard](imgs/trees/final/dashboard.png 'Dashboard')
+
+# About this project
+
+This is a private repository with all my notes and GoBarber React Frontend application code where it consumes the GoBarber API found [here](https://github.com/brpadilha/backend-gobarber) created with NodeJS. This application was used JWT authentication where it receives an authentication token from Api to be able to browse. The authentication is stored in Redux so that whenever the user is logged in, we will have access to Name, Avatar, and their calendar.
+
+This front end is part of the application's Provider, which would be the barber, where it would show your schedule.
+
+---
+
+# Why?
+
+This is a part of my portfolio, I will be happy if you provide me any feedback about this project, anything that you can report, cam make me a better developer!
+
+Email-me: brpadilha.dev@gmail.com
+
+Connect with me at [Linkedin](https://www.linkedin.com/in/brpadilha/)
+
+# Getting Started
+
+To run this project perfectly, you will need to have the backend [click here](https://github.com/brpadilha/backend-gobarber), where you will have access to the Api.
+
+## Installing
+
+<h3>Clonning the Repository</h3>
 
 ```
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-  format,
-  subDays,
-  addDays,
-  setHours,
-  setMinutes,
-  setSeconds,
-  isBefore,
-  isEqual,
-  parseISO,
-} from 'date-fns';
-import pt from 'date-fns/locale/pt';
-import { utcToZonedTime } from 'date-fns-tz';
-import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
-import api from '~/services/api';
-import { Container, Time } from './styles';
+$ git clone git@github.com:brpadilha/frontend-gobarber.git
 
-const range = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+$ cd frontend-gobarber
+```
 
-export default function Dashboard() {
-  const [schedule, setSchedule] = useState([]);
-  const [date, setDate] = useState(new Date());
+<h3>Installing dependencies</h3>
 
-  const dateFormatted = useMemo(
-    () => format(date, "d 'de' MMMM", { locale: pt }),
-    [date]
-  );
+```
+$  yarn
+```
 
-  useEffect(() => {
-    async function loadSchedule() {
-      const response = await api.get('schedule', {
-        params: { date },
-      });
+# Main libraries
 
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      const data = range.map(hour => {
-        const checkDate = setSeconds(setMinutes(setHours(date, hour), 0), 0);
-        const compareDate = utcToZonedTime(checkDate, timezone);
-
-        return {
-          time: `${hour}:00h`,
-          past: isBefore(compareDate, new Date()),
-          appointment: response.data.find(
-            a => parseISO(a.date).toString() === compareDate.toString()
-          ),
-        };
-      });
-
-      setSchedule(data);
-    }
-
-    loadSchedule();
-  }, [date]);
-
-  function handlePrevDay() {
-    setDate(subDays(date, 1));
-  }
-
-  function handleNextDay() {
-    setDate(addDays(date, 1));
-  }
-
-  return (
-    <Container>
-      <header>
-        <button type="button">
-          <MdChevronLeft size={36} color="FFF" onClick={handlePrevDay} />
-        </button>
-        <strong>{dateFormatted}</strong>
-        <button type="button">
-          <MdChevronRight size={36} color="FFF" onClick={handleNextDay} />
-        </button>
-      </header>
-
-      <ul>
-        {schedule.map(time => (
-          <Time key={time.time} past={time.past} available={!time.appointment}>
-            <strong>{time.time}</strong>
-            <span>
-              {time.appointment ? time.appointment.user.name : 'Em aberto'}
-            </span>
-          </Time>
-        ))}
-      </ul>
-    </Container>
-  );
-}
+```
+    "@rocketseat/unform"
+    "@testing-library/jest-dom"
+    "@testing-library/react"
+    "@testing-library/user-event"
+    "axios":
+    "babel-plugin-root-import"
+    "date-fns"
+    "date-fns-tz"
+    "eslint-import-resolver-babel-plugin-root-import"
+    "history"
+    "immer"
+    "polished"
+    "prop-types"
+    "react"
+    "react-dom"
+    "react-icons"
+    "react-perfect-scrollbar"
+    "react-redux"
+    "react-router-dom"
+    "react-toastify"
+    "reactotron-react-js"
+    "reactotron-redux"
+    "reactotron-redux-saga"
+    "redux"
+    "redux-persist"
+    "redux-saga"
+    "serialize-javascript"
+    "styled-components"
+    "unform"
+    "yup":
 ```
