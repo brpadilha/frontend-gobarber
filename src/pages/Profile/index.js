@@ -2,7 +2,7 @@ import React from 'react';
 import { Form, Input } from '@rocketseat/unform';
 import { useSelector, useDispatch } from 'react-redux';
 import { Container } from './styles';
-// import AvatarInput from './AvatarInput';
+import AvatarInput from './AvatarInput';
 
 // import { signOut } from '~/store/modules/auth/actions';
 import { updateProfileRequest } from '~/store/modules/user/actions';
@@ -23,7 +23,7 @@ export default function Profile() {
   return (
     <Container>
       <Form initialData={profile} onSubmit={handleSubmit}>
-        {/* <AvatarInput name="avatar_id" /> */}
+        <AvatarInput name="avatar_id" />
 
         <Input name="name" placeholder="Nome completo" />
         <Input name="email" placeholder="Seu endereço completo" />
